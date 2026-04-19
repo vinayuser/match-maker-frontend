@@ -1,19 +1,20 @@
-import { createContext, useContext, useMemo, useState } from "react";
-import { ONBOARDING_DEFAULT_VALUES, ONBOARDING_STEPS } from "./onboardingConfig";
+import { createContext, useCallback, useContext, useEffect, useMemo } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useLocation } from "react-router-dom";
+import { getToken } from "@/utils/helpers";
+import { store } from "@/store";
+import {
+  updateField as patchOnboardingField,
+  updateFields as patchOnboardingFields,
+  setErrors,
+  resetOnboarding,
+  loadFromSession,
+  hydrateOnboarding
+} from "@/store/slices/onboardingSlice";
+import { ONBOARDING_STEPS } from "./onboardingConfig";
 import { getOnboardingStepIndex } from "@/config/onboardingFlow";
 
 const OnboardingContext = createContext(null);
-
-function loadMergedOnboardingValues() {
-  const stored = sessionStorage.getItem("onboardingData");
-  if (!stored) return ONBOARDING_DEFAULT_VALUES;
-  try {
-    const parsed = JSON.parse(stored);
-    return { ...ONBOARDING_DEFAULT_VALUES, ...parsed };
-  } catch {
-    return ONBOARDING_DEFAULT_VALUES;
-  }
-}
 
 function getStepByPath(pathname) {
   const directMatch = ONBOARDING_STEPS.find((step) => step.route === pathname);
@@ -27,50 +28,51 @@ function getStepByKey(stepKey) {
 }
 
 export function OnboardingProvider({ children }) {
-  const [values, setValues] = useState(loadMergedOnboardingValues);
-  const [errors, setErrors] = useState({});
+  const dispatch = useDispatch();
+  const { pathname } = useLocation();
+  const values = useSelector((s) => s.onboarding.values);
+  const errors = useSelector((s) => s.onboarding.errors);
+  const saving = useSelector((s) => s.onboarding.saving);
+  const loading = useSelector((s) => s.onboarding.loading);
 
-  const persist = (nextValues) => {
-    setValues(nextValues);
-    sessionStorage.setItem("onboardingData", JSON.stringify(nextValues));
-  };
-
-  const updateField = (field, value) => {
-    const nextValues = { ...values, [field]: value };
-    persist(nextValues);
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }));
+  useEffect(() => {
+    const isOnboardingRoute = pathname.startsWith("/onboarding");
+    if (!isOnboardingRoute) return;
+    if (getToken()) {
+      dispatch(hydrateOnboarding());
+    } else {
+      dispatch(loadFromSession());
     }
-  };
+  }, [dispatch, pathname]);
 
-  const updateFields = (updates) => {
-    const nextValues = { ...values, ...updates };
-    persist(nextValues);
-    const touchedKeys = Object.keys(updates);
-    if (touchedKeys.length > 0) {
-      setErrors((prev) => {
-        const next = { ...prev };
-        touchedKeys.forEach((key) => {
-          if (next[key]) next[key] = "";
-        });
-        return next;
-      });
-    }
-  };
+  const updateField = useCallback(
+    (field, value) => {
+      dispatch(patchOnboardingField({ field, value }));
+    },
+    [dispatch]
+  );
+
+  const updateFields = useCallback(
+    (updates) => {
+      dispatch(patchOnboardingFields(updates));
+    },
+    [dispatch]
+  );
 
   const validateByPath = async (pathname) => {
     const step = getStepByPath(pathname);
     if (!step?.schema) return true;
     try {
-      await step.schema.validate(values, { abortEarly: false });
-      setErrors({});
+      const v = store.getState().onboarding.values;
+      await step.schema.validate(v, { abortEarly: false });
+      dispatch(setErrors({}));
       return true;
     } catch (err) {
       const nextErrors = {};
       err.inner?.forEach((issue) => {
         if (issue.path) nextErrors[issue.path] = issue.message;
       });
-      setErrors(nextErrors);
+      dispatch(setErrors(nextErrors));
       return false;
     }
   };
@@ -79,35 +81,37 @@ export function OnboardingProvider({ children }) {
     const step = getStepByKey(stepKey);
     if (!step?.schema) return true;
     try {
-      await step.schema.validate(values, { abortEarly: false });
-      setErrors({});
+      const v = store.getState().onboarding.values;
+      await step.schema.validate(v, { abortEarly: false });
+      dispatch(setErrors({}));
       return true;
     } catch (err) {
       const nextErrors = {};
       err.inner?.forEach((issue) => {
         if (issue.path) nextErrors[issue.path] = issue.message;
       });
-      setErrors(nextErrors);
+      dispatch(setErrors(nextErrors));
       return false;
     }
   };
 
-  const resetOnboarding = () => {
-    persist(ONBOARDING_DEFAULT_VALUES);
-    setErrors({});
-  };
+  const reset = useCallback(() => {
+    dispatch(resetOnboarding());
+  }, [dispatch]);
 
   const contextValue = useMemo(
     () => ({
       values,
       errors,
+      saving,
+      loading,
       updateField,
       updateFields,
       validateByPath,
       validateByStepKey,
-      resetOnboarding
+      resetOnboarding: reset
     }),
-    [values, errors]
+    [values, errors, saving, loading, updateField, updateFields, validateByPath, validateByStepKey, reset]
   );
 
   return <OnboardingContext.Provider value={contextValue}>{children}</OnboardingContext.Provider>;

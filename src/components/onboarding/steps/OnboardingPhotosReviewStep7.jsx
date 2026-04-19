@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { uploadPhotoRequest } from "@/api/onboarding";
 import OnboardingContinueButton from "@/components/onboarding/OnboardingContinueButton";
 import OnboardingKesherHeader from "@/components/onboarding/OnboardingKesherHeader";
 import OnboardingSevenStepProgress from "@/components/onboarding/OnboardingSevenStepProgress";
@@ -27,12 +28,26 @@ function formatStatus(status) {
   return "—";
 }
 
+function formatCustody(v) {
+  if (v === "yes") return "Full custody";
+  if (v === "partially") return "Shared custody";
+  if (v === "no") return "Visitation / other parent primary";
+  const legacy = {
+    "Full Custody": "Full custody",
+    "Shared Custody": "Shared custody",
+    "Visitation Only": "Visitation only"
+  };
+  const s = String(v ?? "").trim();
+  return legacy[s] || prettyText(s, "—");
+}
+
 const EXTRA_PHOTO_LABELS = ["Photo 2", "Photo 3", "Photo 4", "Photo 5"];
 
 export default function OnboardingPhotosReviewStep7() {
-  const { values, errors, updateField } = useOnboarding();
+  const { values, errors, updateField, saving } = useOnboarding();
   const { goNext, goBack, stepNumber } = useOnboardingStepNav("photosReview");
   const [submitAttempt, setSubmitAttempt] = useState(0);
+  const [uploading, setUploading] = useState(() => ({ 0: false, 1: false, 2: false, 3: false, 4: false }));
 
   const primaryInputRef = useRef(null);
   const extraInputRefs = useRef([]);
@@ -55,16 +70,25 @@ export default function OnboardingPhotosReviewStep7() {
   const primary = photos[0] || "";
   const extras = photos.slice(1, 5);
   const childrenSummary = values.hasChildren
-    ? `${values.childrenCount || "—"} (${prettyText(values.custodyArrangement, "custody not set")})`
+    ? `${values.childrenCount || "—"} (${formatCustody(values.custodyArrangement)})`
     : "No";
 
-  const setPhotoAt = (index, file) => {
+  const setPhotoAt = async (index, file) => {
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    const next = [...(values.photos || [])];
-    next[index] = url;
-    while (next.length < 5) next.push("");
-    updateField("photos", next.slice(0, 5));
+    setUploading((prev) => ({ ...prev, [index]: true }));
+    try {
+      const data = await uploadPhotoRequest(file);
+      const url = data?.url;
+      if (!url) return;
+      const next = [...(values.photos || [])];
+      next[index] = url;
+      while (next.length < 5) next.push("");
+      updateField("photos", next.slice(0, 5));
+    } catch {
+      /* upload failed */
+    } finally {
+      setUploading((prev) => ({ ...prev, [index]: false }));
+    }
   };
   const handleContinue = async () => {
     setSubmitAttempt((prev) => prev + 1);
@@ -109,6 +133,14 @@ export default function OnboardingPhotosReviewStep7() {
                           <span className="font-label text-xs uppercase tracking-widest text-on-surface-variant">Main Photo</span>
                         </div>
                       )}
+                      {uploading[0] ? (
+                        <div className="absolute inset-0 z-[5] flex items-center justify-center bg-black/50">
+                          <div className="flex items-center gap-3 rounded-full border border-outline-variant/20 bg-surface-container-low/80 px-4 py-2 backdrop-blur">
+                            <span className="material-symbols-outlined animate-spin text-primary">progress_activity</span>
+                            <span className="font-label text-[11px] uppercase tracking-[0.16em] text-on-surface">Uploading</span>
+                          </div>
+                        </div>
+                      ) : null}
                       <div className="absolute bottom-3 left-3 rounded-full border border-[rgba(245,180,26,0.35)] bg-[rgba(19,19,19,0.82)] px-2.5 py-1">
                         <span className="font-label text-[10px] font-semibold uppercase tracking-[0.16em] text-[#ffd58a]">Main photo</span>
                       </div>
@@ -138,6 +170,11 @@ export default function OnboardingPhotosReviewStep7() {
                                 add
                               </span>
                             )}
+                            {uploading[absoluteIndex] ? (
+                              <div className="absolute inset-0 z-[5] flex items-center justify-center bg-black/50">
+                                <span className="material-symbols-outlined animate-spin text-primary">progress_activity</span>
+                              </div>
+                            ) : null}
                           </button>
                           <input
                             ref={(el) => {
@@ -244,7 +281,7 @@ export default function OnboardingPhotosReviewStep7() {
                           <span className="material-symbols-outlined text-sm">arrow_back</span>
                           Back
                         </button>
-                        <OnboardingContinueButton onClick={handleContinue} label="Register" />
+                        <OnboardingContinueButton onClick={handleContinue} label="Register" disabled={saving} />
                       </div>
                       <p className="onboarding-actions-meta">Estimated review time: 24-48 hours</p>
                     </div>

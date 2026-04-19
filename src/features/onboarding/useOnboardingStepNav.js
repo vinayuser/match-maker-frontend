@@ -1,10 +1,13 @@
 import { useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
 import { ROUTE_PATHS } from "@/routes/paths";
 import { ONBOARDING_STEPS } from "./onboardingConfig";
 import { useOnboarding } from "./OnboardingContext";
+import { saveOnboardingStep, submitOnboarding } from "@/store/slices/onboardingSlice";
 
 export function useOnboardingStepNav(stepKey) {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { validateByStepKey } = useOnboarding();
 
   const stepIndex = ONBOARDING_STEPS.findIndex((step) => step.key === stepKey);
@@ -17,8 +20,17 @@ export function useOnboardingStepNav(stepKey) {
   const goNext = async () => {
     const ok = await validateByStepKey(stepKey);
     if (!ok) return false;
-    navigate(nextRoute);
-    return true;
+    try {
+      if (stepKey === "photosReview") {
+        await dispatch(submitOnboarding()).unwrap();
+      } else {
+        await dispatch(saveOnboardingStep({ stepKey })).unwrap();
+      }
+      navigate(nextRoute);
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   const goSkip = () => {

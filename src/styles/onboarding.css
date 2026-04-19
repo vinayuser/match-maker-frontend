@@ -372,6 +372,24 @@
   box-shadow: 0 0 10px rgba(245, 180, 26, 0.3);
 }
 
+.slider-thumb--interactive {
+  pointer-events: auto;
+  touch-action: none;
+  cursor: grab;
+  width: 24px;
+  height: 24px;
+  border-width: 3px;
+}
+
+.slider-thumb--interactive:active {
+  cursor: grabbing;
+}
+
+.slider-thumb--interactive:focus-visible {
+  outline: 2px solid #ffd58a;
+  outline-offset: 2px;
+}
+
 .monastic-glass {
   background: rgba(53, 53, 52, 0.6);
   backdrop-filter: blur(20px);

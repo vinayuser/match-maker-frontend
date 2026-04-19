@@ -8,8 +8,10 @@ export const ONBOARDING_STEPS = [
     schema: yup.object({
       firstName: yup.string().trim().required("First name is required."),
       lastName: yup.string().trim().required("Last name is required."),
+      gender: yup.string().oneOf(["male", "female", "other"]).required("Gender is required."),
       dateOfBirth: yup.string().required("Date of birth is required."),
-      location: yup.string().trim().required("Current location is required.")
+      location: yup.string().trim().required("Current location is required."),
+      phone: yup.string().trim().optional()
     })
   },
   {
@@ -71,21 +73,39 @@ export const ONBOARDING_STEPS = [
     route: ROUTE_PATHS.ONBOARDING_STATUS_FEMALE_STEP_5,
     schema: yup.object({
       relationshipStatus: yup.string().oneOf(["single", "divorced", "widowed"]).required("Please select your current status."),
-      hasChildren: yup.boolean().required(),
-      childrenCount: yup
-        .number()
-        .transform((value, originalValue) => (originalValue === "" || originalValue === null ? undefined : value))
-        .integer("Enter a whole number.")
-        .min(1, "Enter 1 or more.")
-        .when("hasChildren", {
-          is: true,
-          then: (schema) => schema.required("Children count is required."),
-          otherwise: (schema) => schema.optional()
-        }),
-      custodyArrangement: yup.string().trim().when("hasChildren", {
-        is: true,
-        then: (schema) => schema.required("Custody arrangement is required."),
-        otherwise: (schema) => schema.optional()
+      hasChildren: yup
+        .boolean()
+        .transform((v) => {
+          if (v === 1 || v === true) return true;
+          if (v === 0 || v === false) return false;
+          if (v === undefined || v === null) return false;
+          return Boolean(v);
+        })
+        .required(),
+      childrenCount: yup.mixed().when("hasChildren", {
+        is: (v) => v === true || v === 1,
+        then: () =>
+          yup
+            .number()
+            .transform((val, orig) => {
+              if (orig === "" || orig === null || orig === undefined) return undefined;
+              const n = typeof orig === "number" ? orig : Number(orig);
+              return Number.isFinite(n) ? n : NaN;
+            })
+            .typeError("Enter a valid number.")
+            .required("Children quantity is required.")
+            .integer("Enter a whole number.")
+            .min(1, "Enter 1 or more."),
+        otherwise: () => yup.mixed().nullable().notRequired()
+      }),
+      custodyArrangement: yup.mixed().when("hasChildren", {
+        is: (v) => v === true || v === 1,
+        then: () =>
+          yup
+            .string()
+            .oneOf(["yes", "no", "partially"], "Select a custody arrangement.")
+            .required("Custody arrangement is required."),
+        otherwise: () => yup.string().nullable().notRequired()
       })
     })
   },
@@ -136,6 +156,8 @@ export const ONBOARDING_DEFAULT_VALUES = {
   accountPassword: "",
   firstName: "",
   lastName: "",
+  gender: "",
+  phone: "",
   dateOfBirth: "",
   location: "",
   religiousLevel: "",

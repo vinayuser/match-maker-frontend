@@ -13,7 +13,12 @@ const STATUSES = [
   { value: "widowed", label: "Widowed", icon: "vignette" }
 ];
 
-const CUSTODY_OPTIONS = ["Shared Custody", "Full Custody", "Visitation Only", "Adult Children", "Prefer to discuss"];
+/** Values must match DB ENUM children_live_with: yes | no | partially */
+const CUSTODY_OPTIONS = [
+  { value: "yes", label: "Full Custody" },
+  { value: "partially", label: "Shared Custody" },
+  { value: "no", label: "Visitation Only" }
+];
 const STATUS_ERROR_FIELDS = ["relationshipStatus", "childrenCount", "custodyArrangement"];
 const ERROR_LABELS = {
   relationshipStatus: "Marital status",
@@ -143,15 +148,15 @@ export default function OnboardingStatusFemaleStep5() {
                     <button
                       type="button"
                       role="switch"
-                      aria-checked={values.hasChildren}
-                      onClick={() => setHasChildren(!values.hasChildren)}
+                      aria-checked={Boolean(values.hasChildren)}
+                      onClick={() => setHasChildren(!Boolean(values.hasChildren))}
                       className={`onboarding-switch ${values.hasChildren ? "onboarding-switch--on" : ""}`}
                     >
                       <span className="onboarding-switch__thumb" />
                     </button>
                   </div>
 
-                  {values.hasChildren ? (
+                  {Boolean(values.hasChildren) ? (
                     <div className="mt-6 space-y-6 border-t border-outline-variant/10 pt-6">
                       <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
                         <div>
@@ -173,10 +178,15 @@ export default function OnboardingStatusFemaleStep5() {
                               min={1}
                               inputMode="numeric"
                               className="obi-input w-24 text-center font-headline text-2xl font-extrabold text-primary"
-                              value={values.childrenCount}
+                              value={values.childrenCount === "" || values.childrenCount == null ? "" : values.childrenCount}
                               onChange={(e) => {
                                 const val = e.target.value;
-                                updateField("childrenCount", val === "" ? "" : Number(val));
+                                if (val === "") {
+                                  updateField("childrenCount", "");
+                                  return;
+                                }
+                                const n = parseInt(val, 10);
+                                updateField("childrenCount", Number.isFinite(n) ? n : "");
                               }}
                             />
                             <button
@@ -204,8 +214,8 @@ export default function OnboardingStatusFemaleStep5() {
                             >
                               <option value="">Select arrangement</option>
                               {CUSTODY_OPTIONS.map((option) => (
-                                <option key={option} value={option}>
-                                  {option}
+                                <option key={option.value} value={option.value}>
+                                  {option.label}
                                 </option>
                               ))}
                             </select>

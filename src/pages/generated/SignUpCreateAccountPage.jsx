@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useOnboarding } from "@/features/onboarding/OnboardingContext";
+import { useDispatch } from "react-redux";
+import { registerUser } from "@/store/slices/authThunks";
+import { syncAccountEmail } from "@/store/slices/onboardingSlice";
 import { ROUTE_PATHS } from "@/routes/paths";
 import "@/styles/login-sign-in.css";
 import "@/styles/sign-up.css";
@@ -8,11 +10,9 @@ import "@/styles/sign-up.css";
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function SignUpCreateAccountPage() {
+  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { values, updateFields } = useOnboarding();
-  const navigateTimerRef = useRef(null);
-
-  const [email, setEmail] = useState(() => values.accountEmail || "");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
@@ -40,9 +40,6 @@ function SignUpCreateAccountPage() {
       document.body.className = previousBodyClass;
       const current = document.getElementById(styleTagId);
       if (current) current.remove();
-      if (navigateTimerRef.current) {
-        clearTimeout(navigateTimerRef.current);
-      }
     };
   }, []);
 
@@ -59,20 +56,21 @@ function SignUpCreateAccountPage() {
     return Object.keys(next).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
-    updateFields({
-      accountEmail: email.trim(),
-      accountPassword: password
-    });
-
     setShowLoader(true);
-    navigateTimerRef.current = window.setTimeout(() => {
-      navigateTimerRef.current = null;
+    setFieldErrors({});
+    try {
+      await dispatch(registerUser({ email: email.trim(), password })).unwrap();
+      dispatch(syncAccountEmail({ accountEmail: email.trim() }));
       navigate(ROUTE_PATHS.ONBOARDING_BASIC_INFO);
-    }, 2000);
+    } catch (err) {
+      setFieldErrors({ email: String(err || "Registration failed. Try again.") });
+    } finally {
+      setShowLoader(false);
+    }
   };
 
   return (

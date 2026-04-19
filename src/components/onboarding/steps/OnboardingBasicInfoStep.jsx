@@ -20,7 +20,7 @@ function computeAgeLabel(dateStr) {
 }
 
 export default function OnboardingBasicInfoStep() {
-  const { values, errors, updateField } = useOnboarding();
+  const { values, errors, updateField, saving } = useOnboarding();
   const { goNext, stepNumber } = useOnboardingStepNav("basicInfo");
   const [submitAttempt, setSubmitAttempt] = useState(0);
 
@@ -54,6 +54,19 @@ export default function OnboardingBasicInfoStep() {
 
               <div className="flex flex-col gap-8">
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <div className="flex flex-col gap-2.5 md:col-span-2">
+                    <label className="px-1 text-xs font-bold uppercase tracking-widest text-on-surface-variant/80">Gender</label>
+                    <select
+                      className="obi-input"
+                      value={values.gender || ""}
+                      onChange={(e) => updateField("gender", e.target.value)}
+                    >
+                      <option value="">Select…</option>
+                      <option value="male">Male</option>
+                      <option value="female">Female</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
                   <div className="flex flex-col gap-2.5">
                     <label className="px-1 text-xs font-bold uppercase tracking-widest text-on-surface-variant/80">First Name</label>
                     <input
@@ -78,6 +91,20 @@ export default function OnboardingBasicInfoStep() {
                   </div>
                 </div>
 
+                <div className="flex flex-col gap-2.5">
+                  <label className="px-1 text-xs font-bold uppercase tracking-widest text-on-surface-variant/80">
+                    Phone (private)
+                  </label>
+                  <input
+                    className="obi-input"
+                    type="tel"
+                    autoComplete="tel"
+                    placeholder="+972 …"
+                    value={values.phone || ""}
+                    onChange={(e) => updateField("phone", e.target.value)}
+                  />
+                </div>
+
                 <div className="flex flex-col gap-8">
                   <div className="relative flex flex-col gap-2.5">
                     <label className="px-1 text-xs font-bold uppercase tracking-widest text-on-surface-variant/80">Date of Birth</label>
@@ -100,23 +127,23 @@ export default function OnboardingBasicInfoStep() {
                   <div className="flex flex-col gap-2.5">
                     <label className="px-1 text-xs font-bold uppercase tracking-widest text-on-surface-variant/80">Current Location</label>
                     <div className="group relative flex items-center">
-                      <span className="material-symbols-outlined pointer-events-none absolute left-4 text-primary" data-icon="location_on">
-                        location_on
-                      </span>
                       <input
-                        className="obi-input obi-input--with-pin"
+                        className="obi-input obi-input--with-pin pl-5"
                         placeholder="Tel Aviv, Israel"
                         type="text"
                         autoComplete="address-level1"
                         value={values.location}
                         onChange={(e) => updateField("location", e.target.value)}
                       />
+                      <span className="material-symbols-outlined pointer-events-none absolute right-5 text-primary" data-icon="location_on">
+                        location_on
+                      </span>
                     </div>
                   </div>
                 </div>
 
                 <div className="flex flex-col items-center gap-6 pt-4">
-                  <OnboardingContinueButton onClick={handleContinue} />
+                  <OnboardingContinueButton onClick={handleContinue} disabled={saving} />
                   <p className="text-[11px] font-medium tracking-wide text-on-surface-variant/50">Step 1: Identity Profile</p>
                 </div>
               </div>
@@ -136,6 +163,8 @@ export default function OnboardingBasicInfoStep() {
         fieldLabels={{
           firstName: "First name",
           lastName: "Last name",
+          gender: "Gender",
+          phone: "Phone",
           dateOfBirth: "Date of birth",
           location: "Current location"
         }}

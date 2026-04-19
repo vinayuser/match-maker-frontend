@@ -49,8 +49,8 @@ export default function OnboardingFamilyBackgroundStep4() {
                 </p>
               </div>
 
-              <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div className="flex flex-col justify-between rounded-xl border border-outline-variant/20 bg-surface-container-low p-6 md:min-h-[220px]">
+              <section className="flex flex-col gap-4">
+                <div className="flex flex-col justify-between rounded-xl border border-outline-variant/20 bg-surface-container-low p-6">
                   <span className="material-symbols-outlined mb-3 text-3xl text-primary" data-icon="groups">
                     groups
                   </span>
@@ -93,7 +93,7 @@ export default function OnboardingFamilyBackgroundStep4() {
                   </div>
                 </div>
 
-                <div className="flex flex-col justify-between rounded-xl border border-primary/20 bg-surface-container-high p-6 md:min-h-[220px]">
+                <div className="flex flex-col justify-between rounded-xl border border-primary/20 bg-surface-container-high p-6">
                   <span className="material-symbols-outlined mb-3 text-3xl text-primary" data-icon="format_list_numbered">
                     format_list_numbered
                   </span>
@@ -109,7 +109,7 @@ export default function OnboardingFamilyBackgroundStep4() {
                   </div>
                 </div>
 
-                <div className="flex flex-col justify-between rounded-xl border border-outline-variant/20 bg-surface-container-low p-6 md:min-h-[220px]">
+                <div className="flex flex-col justify-between rounded-xl border border-outline-variant/20 bg-surface-container-low p-6">
                   <span className="material-symbols-outlined mb-3 text-3xl text-primary" data-icon="temple_buddhist">
                     temple_buddhist
                   </span>

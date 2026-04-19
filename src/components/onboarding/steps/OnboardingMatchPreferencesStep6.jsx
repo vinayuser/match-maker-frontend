@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import OnboardingContinueButton from "@/components/onboarding/OnboardingContinueButton";
 import OnboardingKesherHeader from "@/components/onboarding/OnboardingKesherHeader";
 import OnboardingSevenStepProgress from "@/components/onboarding/OnboardingSevenStepProgress";
@@ -22,8 +22,18 @@ const RELIGIOUS_CARDS = [
   { value: "Any", icon: "all_inclusive", subtitle: "Open to journey", filled: false }
 ];
 
+const AGE_MIN = 18;
+const AGE_MAX = 99;
+
 function clamp(n, min, max) {
   return Math.min(max, Math.max(min, n));
+}
+
+function parseAge(v, fallback) {
+  if (typeof v === "number" && Number.isFinite(v)) return clamp(v, AGE_MIN, AGE_MAX);
+  if (v === "" || v == null) return fallback;
+  const n = parseInt(String(v), 10);
+  return Number.isFinite(n) ? clamp(n, AGE_MIN, AGE_MAX) : fallback;
 }
 
 function DealBreakerToggleVisual({ on, variant = "gold" }) {
@@ -41,6 +51,9 @@ export default function OnboardingMatchPreferencesStep6() {
   const { values, errors, updateField } = useOnboarding();
   const { goNext, goSkip, goBack, stepNumber } = useOnboardingStepNav("matchPreferences");
   const [submitAttempt, setSubmitAttempt] = useState(0);
+  const trackRef = useRef(null);
+  const agesRef = useRef({ min: 24, max: 36 });
+  const [dragging, setDragging] = useState(null);
 
   usePageMeta({
     title: "Kesher | Match Preferences",
@@ -49,31 +62,109 @@ export default function OnboardingMatchPreferencesStep6() {
     styles: "body { background-color: #0e0e0e !important; }"
   });
 
-  const minAge = typeof values.preferredAgeMin === "number" ? values.preferredAgeMin : 24;
-  const maxAge = typeof values.preferredAgeMax === "number" ? values.preferredAgeMax : 36;
+  const minAge = parseAge(values.preferredAgeMin, 24);
+  const maxAge = parseAge(values.preferredAgeMax, 36);
+
+  useLayoutEffect(() => {
+    if (!dragging) {
+      agesRef.current = { min: minAge, max: maxAge };
+    }
+  }, [minAge, maxAge, dragging]);
 
   const progressStyle = useMemo(() => {
-    const minP = ((minAge - 18) / (99 - 18)) * 100;
-    const maxP = ((maxAge - 18) / (99 - 18)) * 100;
+    const minP = ((minAge - AGE_MIN) / (AGE_MAX - AGE_MIN)) * 100;
+    const maxP = ((maxAge - AGE_MIN) / (AGE_MAX - AGE_MIN)) * 100;
     const left = Math.min(minP, maxP);
     const right = 100 - Math.max(minP, maxP);
     return { left: `${left}%`, right: `${right}%` };
   }, [minAge, maxAge]);
 
-  const minThumbLeft = `${((minAge - 18) / (99 - 18)) * 100}%`;
-  const maxThumbLeft = `${((maxAge - 18) / (99 - 18)) * 100}%`;
+  const minThumbLeft = `${((minAge - AGE_MIN) / (AGE_MAX - AGE_MIN)) * 100}%`;
+  const maxThumbLeft = `${((maxAge - AGE_MIN) / (AGE_MAX - AGE_MIN)) * 100}%`;
 
-  const setMinAge = (next) => {
-    const n = clamp(next, 18, 99);
-    const hi = typeof values.preferredAgeMax === "number" ? values.preferredAgeMax : 99;
-    updateField("preferredAgeMin", Math.min(n, hi));
-  };
+  const ageFromClientX = useCallback((clientX) => {
+    const el = trackRef.current;
+    if (!el) return AGE_MIN;
+    const rect = el.getBoundingClientRect();
+    const w = rect.width || 1;
+    const t = clamp((clientX - rect.left) / w, 0, 1);
+    return Math.round(AGE_MIN + t * (AGE_MAX - AGE_MIN));
+  }, []);
 
-  const setMaxAge = (next) => {
-    const n = clamp(next, 18, 99);
-    const lo = typeof values.preferredAgeMin === "number" ? values.preferredAgeMin : 18;
-    updateField("preferredAgeMax", Math.max(n, lo));
-  };
+  const applyAgeAt = useCallback(
+    (clientX, which) => {
+      const n = ageFromClientX(clientX);
+      const { min, max } = agesRef.current;
+      if (which === "min") {
+        const next = Math.min(n, max);
+        agesRef.current = { min: next, max };
+        updateField("preferredAgeMin", next);
+      } else {
+        const next = Math.max(n, min);
+        agesRef.current = { min, max: next };
+        updateField("preferredAgeMax", next);
+      }
+    },
+    [ageFromClientX, updateField]
+  );
+
+  const onTrackPointerDown = useCallback(
+    (e) => {
+      if (e.button !== 0) return;
+      if (e.target.closest?.("[data-age-thumb]")) return;
+      const track = trackRef.current;
+      if (!track || !track.contains(e.target)) return;
+      const age = ageFromClientX(e.clientX);
+      const { min, max } = agesRef.current;
+      const distMin = Math.abs(age - min);
+      const distMax = Math.abs(age - max);
+      if (distMin <= distMax) {
+        applyAgeAt(e.clientX, "min");
+      } else {
+        applyAgeAt(e.clientX, "max");
+      }
+    },
+    [ageFromClientX, applyAgeAt]
+  );
+
+  const onMinThumbPointerDown = useCallback((e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setDragging("min");
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }, []);
+
+  const onMaxThumbPointerDown = useCallback((e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setDragging("max");
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }, []);
+
+  const onMinThumbPointerMove = useCallback(
+    (e) => {
+      if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+      applyAgeAt(e.clientX, "min");
+    },
+    [applyAgeAt]
+  );
+
+  const onMaxThumbPointerMove = useCallback(
+    (e) => {
+      if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+      applyAgeAt(e.clientX, "max");
+    },
+    [applyAgeAt]
+  );
+
+  const onThumbPointerUp = useCallback((e) => {
+    if (e.currentTarget.hasPointerCapture?.(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    setDragging(null);
+  }, []);
 
   const toggleBool = (key) => updateField(key, !values[key]);
   const handleContinue = async () => {
@@ -107,34 +198,52 @@ export default function OnboardingMatchPreferencesStep6() {
               </span>
             </div>
             <div className="pt-4 pb-2">
-              <div className="dual-slider-track">
-                <div className="absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 rounded-[2px] bg-[#2a2a2a]" />
-                <div className="dual-slider-progress z-[1]" style={progressStyle} />
-                <div className="slider-thumb z-[3] pointer-events-none" style={{ left: minThumbLeft }} />
-                <div className="slider-thumb z-[3] pointer-events-none" style={{ left: maxThumbLeft }} />
-                <input
-                  aria-label="Minimum age"
-                  className="absolute inset-0 z-[4] w-full opacity-0 cursor-pointer"
-                  type="range"
-                  min={18}
-                  max={99}
-                  value={minAge}
-                  onChange={(e) => setMinAge(Number(e.target.value))}
+              <div
+                ref={trackRef}
+                className="dual-slider-track relative min-h-[44px] cursor-pointer py-2"
+                onPointerDown={onTrackPointerDown}
+              >
+                <div className="pointer-events-none absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 rounded-[2px] bg-[#2a2a2a]" />
+                <div className="dual-slider-progress pointer-events-none z-[1]" style={progressStyle} />
+                <button
+                  type="button"
+                  data-age-thumb="min"
+                  className={`slider-thumb slider-thumb--interactive z-[3] ${dragging === "min" ? "z-[6]" : ""}`}
+                  style={{ left: minThumbLeft }}
+                  aria-label="Minimum age in range"
+                  role="slider"
+                  aria-valuemin={AGE_MIN}
+                  aria-valuemax={maxAge}
+                  aria-valuenow={minAge}
+                  aria-orientation="horizontal"
+                  onPointerDown={onMinThumbPointerDown}
+                  onPointerMove={onMinThumbPointerMove}
+                  onPointerUp={onThumbPointerUp}
+                  onPointerCancel={onThumbPointerUp}
+                  onLostPointerCapture={onThumbPointerUp}
                 />
-                <input
-                  aria-label="Maximum age"
-                  className="absolute inset-0 z-[5] w-full opacity-0 cursor-pointer"
-                  type="range"
-                  min={18}
-                  max={99}
-                  value={maxAge}
-                  onChange={(e) => setMaxAge(Number(e.target.value))}
+                <button
+                  type="button"
+                  data-age-thumb="max"
+                  className={`slider-thumb slider-thumb--interactive z-[3] ${dragging === "max" ? "z-[6]" : ""}`}
+                  style={{ left: maxThumbLeft }}
+                  aria-label="Maximum age in range"
+                  role="slider"
+                  aria-valuemin={minAge}
+                  aria-valuemax={AGE_MAX}
+                  aria-valuenow={maxAge}
+                  aria-orientation="horizontal"
+                  onPointerDown={onMaxThumbPointerDown}
+                  onPointerMove={onMaxThumbPointerMove}
+                  onPointerUp={onThumbPointerUp}
+                  onPointerCancel={onThumbPointerUp}
+                  onLostPointerCapture={onThumbPointerUp}
                 />
               </div>
             </div>
             <div className="flex justify-between text-[10px] uppercase tracking-widest text-on-surface-variant/40 font-bold">
-              <span>18</span>
-              <span>99</span>
+              <span>{AGE_MIN}</span>
+              <span>{AGE_MAX}</span>
             </div>
           </section>
 
