@@ -1,0 +1,128 @@
+/* Login page — parity with frontend_html/login_sign_in; colors do not rely on Tailwind theme tokens */
+
+.login-sign-in-page {
+  background-color: #000000;
+  min-height: 100vh;
+}
+
+.login-brand-link {
+  text-decoration: none;
+  color: inherit;
+}
+
+.login-brand-link:focus-visible {
+  outline: 2px solid rgba(245, 180, 26, 0.45);
+  outline-offset: 6px;
+  border-radius: 0.25rem;
+}
+
+.login-sign-in-page .login-brand-icon {
+  color: #f5b41a;
+}
+
+.login-sign-in-page .login-brand-title {
+  color: #f5b41a;
+  letter-spacing: -0.04em;
+}
+
+.login-sign-in-page .login-brand-tagline {
+  color: #e5e2e1;
+  letter-spacing: 0.35em;
+  font-size: 10px;
+}
+
+.login-sign-in-page .login-card {
+  background-color: #1c1b1b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.75rem;
+  box-shadow: 0 0 60px -15px rgba(245, 180, 26, 0.12);
+}
+
+.login-sign-in-page .login-input {
+  width: 100%;
+  background-color: #2a2a2a;
+  border: none;
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  color: #e5e2e1;
+  outline: none;
+  transition: box-shadow 0.15s ease;
+}
+
+.login-sign-in-page .login-input::placeholder {
+  color: rgba(212, 196, 172, 0.45);
+}
+
+.login-sign-in-page .login-input:focus {
+  box-shadow: 0 0 0 1px rgba(245, 180, 26, 0.45);
+}
+
+.login-sign-in-page .login-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #d4c4ac;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.login-sign-in-page .login-forgot {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #ffd58a;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.login-sign-in-page .login-forgot:hover {
+  color: #f5b41a;
+}
+
+.login-sign-in-page .login-cta {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 1rem 1.5rem;
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #412d00 !important;
+  background: linear-gradient(135deg, #f5b41a 0%, #ffd58a 100%);
+  box-shadow: 0 10px 28px rgba(245, 180, 26, 0.22);
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.login-sign-in-page .login-cta:hover {
+  filter: brightness(1.05);
+}
+
+.login-sign-in-page .login-cta:active {
+  transform: scale(0.98);
+}
+
+.login-sign-in-page .login-apply {
+  color: #f5b41a;
+  font-weight: 600;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 0.25rem;
+}
+
+.login-sign-in-page .login-apply:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.login-sign-in-page .login-footer-note {
+  color: rgba(212, 196, 172, 0.45);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}

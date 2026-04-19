@@ -1,0 +1,483 @@
+/* Ported from frontend_html onboarding pages — keeps parity with source designs */
+
+/* 7-segment step indicator — gold fill does not rely on Tailwind `bg-primary-container` */
+.onboarding-seven-bar {
+  min-height: 6px;
+}
+
+.onboarding-seven-bar--filled {
+  background-color: #f5b41a;
+}
+
+.onboarding-seven-bar--track {
+  background-color: #2a2a2a;
+}
+
+/*
+ * Onboarding shell (Steps 1–7): same card + field + primary CTA as Step 1.
+ * Scoped to `.onboarding-basic-info` (Step 1) and `.onboarding-flow` (Steps 2–7).
+ * Tailwind CDN `forms` plugin can lighten inputs; these rules override.
+ */
+.onboarding-basic-info,
+.onboarding-flow {
+  --obi-page-bg: #0e0e0e;
+  --obi-card-bg: #1c1b1b;
+  --obi-field-bg: #2a2a2a;
+  --obi-field-border: rgba(80, 69, 51, 0.15);
+  --obi-gold: #ffd58a;
+  --obi-gold-strong: #f5b41a;
+  --obi-on-primary: #412d00;
+}
+
+.onboarding-basic-info-page,
+.onboarding-flow-page {
+  background-color: var(--obi-page-bg);
+  min-height: 100%;
+}
+
+.onboarding-basic-info .obi-card,
+.onboarding-flow .obi-card {
+  background-color: var(--obi-card-bg);
+  border-radius: 1rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+@media (min-width: 768px) {
+  .onboarding-basic-info .obi-card,
+  .onboarding-flow .obi-card {
+    border-radius: 1.5rem;
+  }
+}
+
+.onboarding-basic-info .obi-input,
+.onboarding-flow .obi-input,
+.onboarding-basic-info input[type="text"],
+.onboarding-flow input[type="text"],
+.onboarding-basic-info input[type="number"],
+.onboarding-flow input[type="number"],
+.onboarding-basic-info input[type="date"],
+.onboarding-flow input[type="date"],
+.onboarding-basic-info select.obi-select,
+.onboarding-flow select.obi-select {
+  width: 100%;
+  background-color: var(--obi-field-bg) !important;
+  color: #e5e2e1 !important;
+  border: 1px solid var(--obi-field-border) !important;
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  -webkit-appearance: none;
+  appearance: none;
+  color-scheme: dark;
+}
+
+.onboarding-basic-info textarea.obi-input,
+.onboarding-flow textarea.obi-input {
+  width: 100%;
+  min-height: 8rem;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+  background-color: var(--obi-field-bg) !important;
+  color: #e5e2e1 !important;
+  border: 1px solid var(--obi-field-border) !important;
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  outline: none;
+}
+
+.onboarding-basic-info textarea.obi-input:focus,
+.onboarding-flow textarea.obi-input:focus {
+  border-color: var(--obi-gold) !important;
+  box-shadow: 0 0 0 1px rgba(255, 213, 138, 0.25);
+}
+
+.onboarding-basic-info .obi-input--with-pin,
+.onboarding-flow .obi-input--with-pin {
+  padding-left: 3rem;
+}
+
+.onboarding-basic-info .obi-input::placeholder,
+.onboarding-flow .obi-input::placeholder,
+.onboarding-basic-info textarea.obi-input::placeholder,
+.onboarding-flow textarea.obi-input::placeholder {
+  color: rgba(212, 196, 172, 0.35);
+}
+
+.onboarding-basic-info .obi-input:focus,
+.onboarding-flow .obi-input:focus,
+.onboarding-basic-info input[type="text"]:focus,
+.onboarding-flow input[type="text"]:focus,
+.onboarding-basic-info input[type="number"]:focus,
+.onboarding-flow input[type="number"]:focus,
+.onboarding-basic-info input[type="date"]:focus,
+.onboarding-flow input[type="date"]:focus,
+.onboarding-basic-info select.obi-select:focus,
+.onboarding-flow select.obi-select:focus {
+  border-color: var(--obi-gold) !important;
+  box-shadow: 0 0 0 1px rgba(255, 213, 138, 0.25);
+}
+
+/* Room for the age pill + calendar icon inside the date field */
+.onboarding-basic-info input[type="date"],
+.onboarding-flow input[type="date"] {
+  padding-right: 11rem;
+}
+
+.onboarding-basic-info .obi-continue,
+.onboarding-flow .obi-continue {
+  width: auto;
+  min-width: 10.5rem;
+  border: none;
+  cursor: pointer;
+  border-radius: 9999px;
+  padding: 0.85rem 1.6rem;
+  font-weight: 700;
+  color: var(--obi-on-primary) !important;
+  background: linear-gradient(135deg, var(--obi-gold-strong) 0%, var(--obi-gold) 100%) !important;
+  box-shadow: 0 8px 30px rgba(245, 180, 26, 0.22);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  transition: transform 0.15s ease;
+}
+
+.onboarding-basic-info .obi-continue:hover,
+.onboarding-flow .obi-continue:hover {
+  transform: scale(0.98);
+}
+
+.onboarding-basic-info .obi-continue:active,
+.onboarding-flow .obi-continue:active {
+  transform: scale(0.95);
+}
+
+.onboarding-basic-info .obi-continue:disabled,
+.onboarding-flow .obi-continue:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.onboarding-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.onboarding-actions--bordered {
+  border-top: 1px solid rgba(80, 69, 51, 0.25);
+  padding-top: 1.75rem;
+}
+
+.onboarding-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: rgba(229, 226, 225, 0.72);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: color 0.15s ease;
+}
+
+.onboarding-back-btn:hover {
+  color: #ffd58a;
+}
+
+.onboarding-actions-meta {
+  margin-top: 0.65rem;
+  text-align: center;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  color: rgba(229, 226, 225, 0.45);
+  text-transform: uppercase;
+}
+
+.onboarding-switch {
+  width: 56px;
+  height: 30px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #353534;
+  position: relative;
+  flex-shrink: 0;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.onboarding-switch--on {
+  background: rgba(245, 180, 26, 0.25);
+  border-color: rgba(245, 180, 26, 0.6);
+}
+
+.onboarding-switch__thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  background: #e5e2e1;
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.onboarding-switch--on .onboarding-switch__thumb {
+  transform: translateX(26px);
+  background: #ffd58a;
+}
+
+.onboarding-toast-stack {
+  position: fixed;
+  top: 84px;
+  right: 16px;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  pointer-events: none;
+}
+
+.onboarding-toast {
+  width: min(360px, calc(100vw - 32px));
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 180, 171, 0.45);
+  background: rgba(105, 0, 5, 0.93);
+  color: #ffdad6;
+  padding: 0.75rem 0.9rem;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+}
+
+.onboarding-toast__title {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.onboarding-toast__message {
+  margin-top: 0.3rem;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.onboarding-body-basic {
+  background-color: #0e0e0e;
+}
+
+.onboarding-body-default {
+  background-color: #131313;
+  color: #e5e2e1;
+  font-family: "Inter", sans-serif;
+}
+
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+.glass-panel {
+  background: rgba(53, 53, 52, 0.6);
+  backdrop-filter: blur(20px);
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #1c1b1b;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #504533;
+  border-radius: 10px;
+}
+
+.monastic-gradient {
+  background: linear-gradient(135deg, #f5b41a 0%, #ffd58a 100%);
+}
+
+.ghost-border {
+  border: 1px solid rgba(80, 69, 51, 0.15);
+}
+
+.stepper-line {
+  height: 2px;
+  flex-grow: 1;
+  background: #1c1b1b;
+}
+
+.stepper-line-active {
+  background: #f5b41a;
+}
+
+.custom-radio:checked + div {
+  background-color: #2a2a2a;
+  border: 1px solid #f5b41a;
+}
+
+.toggle-checkbox:checked {
+  right: 0;
+  border-color: #f5b41a;
+}
+
+.toggle-checkbox:checked + .toggle-label {
+  background-color: #f5b41a;
+}
+
+.dual-slider-track {
+  height: 28px;
+  background: transparent;
+  border-radius: 2px;
+  position: relative;
+}
+
+.dual-slider-progress {
+  height: 4px;
+  background: #f5b41a;
+  position: absolute;
+  left: 20%;
+  right: 40%;
+  border-radius: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.slider-thumb {
+  width: 20px;
+  height: 20px;
+  background: #f5b41a;
+  border: 4px solid #131313;
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 10px rgba(245, 180, 26, 0.3);
+}
+
+.monastic-glass {
+  background: rgba(53, 53, 52, 0.6);
+  backdrop-filter: blur(20px);
+}
+
+.gold-gradient-cta {
+  background: linear-gradient(135deg, #f5b41a 0%, #ffd58a 100%);
+}
+
+.asymmetric-layout {
+  grid-template-columns: 1.2fr 0.8fr;
+}
+
+/* Deal-breaker toggles (Step 6): explicit colors so on/off is always visible without Tailwind tokens */
+.onboarding-flow .onboarding-deal-toggle {
+  display: inline-block;
+  width: 48px;
+  height: 26px;
+  border-radius: 9999px;
+  position: relative;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #353534;
+  transition: background 0.2s ease, border-color 0.2s ease;
+  pointer-events: none;
+}
+
+.onboarding-flow .onboarding-deal-toggle--on {
+  background: rgba(245, 180, 26, 0.22);
+  border-color: rgba(245, 180, 26, 0.5);
+}
+
+.onboarding-flow .onboarding-deal-toggle--on.onboarding-deal-toggle--smoker {
+  background: rgba(180, 40, 30, 0.38);
+  border-color: rgba(255, 180, 171, 0.4);
+}
+
+.onboarding-flow .onboarding-deal-toggle__thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #e5e2e1;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.onboarding-flow .onboarding-deal-toggle--on .onboarding-deal-toggle__thumb {
+  transform: translateX(22px);
+}
+
+.onboarding-flow .onboarding-deal-toggle--on.onboarding-deal-toggle--smoker .onboarding-deal-toggle__thumb {
+  background: #ffb4ab;
+}
+
+.onboarding-flow .onboarding-deal-toggle--on:not(.onboarding-deal-toggle--smoker) .onboarding-deal-toggle__thumb {
+  background: #ffd58a;
+}
+
+/* Personality / interest chips (Step 3): selected state must read clearly on dark UI */
+.onboarding-flow .onboarding-chip {
+  cursor: pointer;
+  border-radius: 9999px;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid rgba(80, 69, 51, 0.55);
+  color: #d4c4ac;
+  background: transparent;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease, font-weight 0.15s ease;
+}
+
+.onboarding-flow .onboarding-chip:hover {
+  border-color: rgba(245, 180, 26, 0.45);
+}
+
+.onboarding-flow .onboarding-chip--selected {
+  border-color: var(--obi-gold-strong);
+  background: rgba(245, 180, 26, 0.2);
+  color: var(--obi-gold);
+  font-weight: 600;
+}
+
+/* Step 2 option pills: force clear selected/unselected contrast */
+.onboarding-flow .onboarding-choice-pill {
+  flex-shrink: 0;
+  white-space: nowrap;
+  border-radius: 9999px;
+  border: 1px solid rgba(80, 69, 51, 0.55);
+  background: #201f1f;
+  color: #d4c4ac;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.onboarding-flow .onboarding-choice-pill:hover {
+  border-color: rgba(245, 180, 26, 0.45);
+}
+
+.onboarding-flow .onboarding-choice-pill--selected {
+  border-color: #f5b41a;
+  background: rgba(245, 180, 26, 0.18);
+  color: #ffd58a;
+  box-shadow: 0 0 0 1px rgba(245, 180, 26, 0.15);
+}

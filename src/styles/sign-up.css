@@ -1,0 +1,186 @@
+.sign-up-page {
+  background-color: #000000;
+  min-height: 100vh;
+  color: #e5e2e1;
+}
+
+.sign-up-initiation {
+  color: #f5b41a;
+  font-size: 10px;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+}
+
+.sign-up-headline {
+  font-size: clamp(2.25rem, 5vw, 3.75rem);
+  line-height: 1.05;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+.sign-up-headline-line {
+  color: #ffffff;
+}
+
+.sign-up-headline-accent {
+  color: #f5b41a;
+}
+
+.sign-up-rule {
+  width: 4rem;
+  height: 2px;
+  background: linear-gradient(90deg, #f5b41a, rgba(245, 180, 26, 0.2));
+  margin-top: 1rem;
+}
+
+.sign-up-lede {
+  color: rgba(229, 226, 225, 0.92);
+  font-size: 1.125rem;
+  line-height: 1.65;
+  max-width: 26rem;
+}
+
+.sign-up-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.sign-up-badge .material-symbols-outlined {
+  font-size: 1.125rem;
+  color: #f5b41a;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+.sign-up-badge span:last-child {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #f5b41a;
+}
+
+.sign-up-info {
+  display: flex;
+  gap: 0.875rem;
+  align-items: flex-start;
+  padding: 1rem 1.125rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.35);
+}
+
+.sign-up-info-icon {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(245, 180, 26, 0.45);
+  color: #f5b41a;
+  font-size: 1rem;
+  font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+.sign-up-info p {
+  margin: 0;
+  font-size: 0.8125rem;
+  line-height: 1.55;
+  font-style: italic;
+  color: rgba(229, 226, 225, 0.88);
+}
+
+.sign-up-philosophy {
+  display: block;
+  width: 100%;
+  margin-top: 1.25rem;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(212, 196, 172, 0.55);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+}
+
+.sign-up-philosophy:hover {
+  color: #f5b41a;
+}
+
+.sign-up-field-error {
+  margin-top: 0.35rem;
+  padding-left: 0.25rem;
+  font-size: 0.75rem;
+  color: #f08070;
+}
+
+/* Match login CTA; extra state while loader runs */
+.sign-up-page.login-sign-in-page .login-cta:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  filter: none;
+}
+
+.sign-up-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  background: rgba(0, 0, 0, 0.92);
+  backdrop-filter: blur(6px);
+}
+
+.sign-up-loader-spinner {
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 3px solid rgba(245, 180, 26, 0.2);
+  border-top-color: #f5b41a;
+  border-radius: 50%;
+  animation: sign-up-spin 0.85s linear infinite;
+}
+
+@keyframes sign-up-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sign-up-loader-text {
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(229, 226, 225, 0.75);
+}
+
+.sign-up-top-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .sign-up-top-bar {
+    padding: 1.5rem 3rem;
+  }
+}
