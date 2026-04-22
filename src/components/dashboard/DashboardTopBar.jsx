@@ -34,12 +34,12 @@ function DashboardTopBar({ active = "discover", avatarUrl = "" }) {
   };
 
   return (
-    <header className="fixed top-0 z-[60] w-full h-20 px-6 md:px-8 bg-[#0E0E0E]/90 backdrop-blur-xl border-b border-[#9D8F79]/20 shadow-[0_0_40px_rgba(245,180,26,0.05)] font-['Manrope']">
-      <div className="h-full flex justify-between items-center">
-      <div className="text-2xl font-bold tracking-tighter text-[#F5B41A]">
+    <header className="fixed top-0 z-[60] w-full h-20 px-6 md:px-8 lg:pl-[18rem] bg-[#0E0E0E]/90 backdrop-blur-xl border-b border-[#9D8F79]/20 shadow-[0_0_40px_rgba(245,180,26,0.05)] font-['Manrope']">
+      <div className="h-full w-full relative flex items-center">
+      <div className="absolute left-0 text-2xl font-bold tracking-tighter text-[#F5B41A] lg:hidden">
         <NavLink to={ROUTE_PATHS.DASHBOARD_DISCOVERY}>Kesher</NavLink>
       </div>
-      <div className="hidden md:flex items-center gap-10">
+      <div className="hidden md:flex w-full items-center justify-center gap-10">
         <NavLink className={`${linkClass("discover")} uppercase tracking-[0.05em] text-xs`} to={ROUTE_PATHS.DASHBOARD_DISCOVERY}>
           Discover
         </NavLink>
@@ -53,7 +53,7 @@ function DashboardTopBar({ active = "discover", avatarUrl = "" }) {
           Matches
         </NavLink>
       </div>
-      <div ref={dropdownRef} className="flex items-center gap-4 relative">
+      <div ref={dropdownRef} className="ml-auto flex items-center gap-4 relative">
         <button type="button" className="text-[#9D8F79] hover:text-[#FFD58A] transition-all active:scale-95 hidden sm:block">
           <span className="material-symbols-outlined">notifications</span>
         </button>

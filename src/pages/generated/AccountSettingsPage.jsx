@@ -1,8 +1,66 @@
+import { useEffect, useMemo, useState } from "react";
+import { useSelector } from "react-redux";
 import DashboardBottomNav from "@/components/dashboard/DashboardBottomNav";
 import DashboardTopBar from "@/components/dashboard/DashboardTopBar";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { getOnboardingRequest } from "@/api/onboarding";
+
+const PROFILE_FIELD_LABELS = {
+  firstName: "First Name",
+  lastName: "Last Name",
+  gender: "Gender",
+  dateOfBirth: "Date of Birth",
+  phone: "Phone",
+  city: "City",
+  country: "Country",
+  location: "Current Location",
+  religiousLevel: "Religious Level",
+  shabbatObservance: "Shabbat Observance",
+  kashrutLevel: "Kashrut Level",
+  lifestyleDescription: "Lifestyle Description",
+  personalityTraits: "Personality Traits",
+  hobbies: "Hobbies",
+  aboutMe: "About Me",
+  lookingFor: "Looking For",
+  siblingsCount: "Siblings Count",
+  birthOrder: "Birth Order",
+  familyStyle: "Family Style",
+  motherHeritage: "Mother Heritage",
+  fatherHeritage: "Father Heritage",
+  familyNarrative: "Family Narrative",
+  siblingNotes: "Sibling Notes",
+  relationshipStatus: "Relationship Status",
+  hasChildren: "Has Children",
+  childrenCount: "Children Count",
+  custodyArrangement: "Custody Arrangement",
+  preferredAgeMin: "Preferred Age Min",
+  preferredAgeMax: "Preferred Age Max",
+  matchReligiousPreference: "Match Religious Preference",
+  dealBreakerSmoker: "Deal Breaker: Smoker",
+  dealBreakerDifferentReligiousLevel: "Deal Breaker: Religious Level",
+  dealBreakerHasChildren: "Deal Breaker: Has Children",
+  agreementAccepted: "Agreement Accepted",
+  profileStatus: "Profile Status",
+  verificationStatus: "Verification Status",
+  lastOnboardingStep: "Last Onboarding Step",
+  isCohen: "Is Cohen",
+  lineageNotes: "Lineage Notes"
+};
+
+function formatFieldValue(value) {
+  if (value === null || value === undefined || value === "") return "";
+  if (Array.isArray(value)) return value.join(", ");
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
 
 function AccountSettingsPage() {
+  const { user } = useSelector((state) => state.auth);
+  const [bundle, setBundle] = useState({ profile: {}, photos: [] });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
   usePageMeta({
     title: "Account Settings | Kesher",
     bodyClass: "bg-background text-on-background min-h-screen pb-32",
@@ -13,147 +71,103 @@ function AccountSettingsPage() {
         body {
             font-family: 'Inter', sans-serif;
             background-color: #131313;
-        }
-        .font-headline {
-            font-family: 'Manrope', sans-serif;
         }`
   });
 
+  useEffect(() => {
+    const loadProfileBundle = async () => {
+      try {
+        setLoading(true);
+        setError("");
+        const data = await getOnboardingRequest();
+        setBundle({
+          profile: data?.profile || {},
+          photos: data?.photos || []
+        });
+      } catch (e) {
+        setError(e.message || "Failed to load profile details.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadProfileBundle();
+  }, []);
+
+  const profileEntries = useMemo(() => {
+    return Object.entries(bundle.profile || {})
+      .filter(([key, value]) => !["accountEmail", "accountPassword", "isLocked"].includes(key) && value !== null && value !== "")
+      .map(([key, value]) => ({
+        key,
+        label: PROFILE_FIELD_LABELS[key] || key,
+        value: formatFieldValue(value)
+      }));
+  }, [bundle.profile]);
+
   return (
     <>
-<DashboardTopBar
-active="profile"
-avatarUrl="https://lh3.googleusercontent.com/aida-public/AB6AXuDtnGB718XBRq07coyWjjevbG3S5jO9D_L6iVfgljYx8LVcrqKnX-sX-L7A-pJbp1z6es7WxiUw9YQOrAuqcICTLgPNGlkTJ1uCVng4-VzktkOSr6e0MW5BLZ-fQRgaQyAuhCIxwcLkz1Ufeeca_y8fchKvYMYHgs1KARUdJip6y1rzrJ9PRWWXJ6MNiskv9ZNleTEWcUM8ehuz81CQFLZpW1_0K4ZepMGtjjJBzvuLiduqov51TCh34e0BPIYQDp_V72ZrUzcw1bk"
-/>
-<main className="max-w-3xl mx-auto pt-32 px-6">
-{/* Header Section */}
-<section className="mb-16">
-<h1 className="text-5xl font-headline font-extrabold tracking-tight text-on-surface mb-2">Settings</h1>
-<p className="text-on-surface-variant font-body tracking-wide opacity-80">Manage your private sanctuary and account preferences.</p>
-</section>
-<div className="space-y-12">
-{/* Account Essentials */}
-<section>
-<div className="flex items-center gap-4 mb-8">
-<span className="h-px flex-1 bg-outline-variant/20"></span>
-<h2 className="font-headline text-xs font-bold tracking-[0.3em] uppercase text-primary">Account Essentials</h2>
-<span className="h-px flex-1 bg-outline-variant/20"></span>
-</div>
-<div className="space-y-4">
-{/* Email Address */}
-<div className="group flex items-center justify-between p-6 rounded-xl bg-surface-container-low hover:bg-surface-container-high transition-all duration-500 border border-transparent hover:border-outline-variant/10">
-<div className="flex items-center gap-6">
-<div className="w-12 h-12 flex items-center justify-center rounded-full bg-surface-container-lowest text-primary">
-<span className="material-symbols-outlined">mail</span>
-</div>
-<div>
-<p className="text-[10px] font-bold tracking-[0.2em] uppercase text-on-surface-variant mb-1">Email Address</p>
-<p className="text-lg font-medium text-on-surface">j.stern@sanctuary.com</p>
-</div>
-</div>
-<button className="text-primary hover:text-primary-container transition-colors p-2">
-<span className="material-symbols-outlined">chevron_right</span>
-</button>
-</div>
-{/* Phone Number */}
-<div className="group flex items-center justify-between p-6 rounded-xl bg-surface-container-low hover:bg-surface-container-high transition-all duration-500 border border-transparent hover:border-outline-variant/10">
-<div className="flex items-center gap-6">
-<div className="w-12 h-12 flex items-center justify-center rounded-full bg-surface-container-lowest text-primary">
-<span className="material-symbols-outlined">smartphone</span>
-</div>
-<div>
-<p className="text-[10px] font-bold tracking-[0.2em] uppercase text-on-surface-variant mb-1">Phone Number</p>
-<p className="text-lg font-medium text-on-surface">+1 ••• ••• 4492</p>
-</div>
-</div>
-<button className="text-primary hover:text-primary-container transition-colors p-2">
-<span className="material-symbols-outlined">chevron_right</span>
-</button>
-</div>
-{/* Change Password */}
-<div className="group flex items-center justify-between p-6 rounded-xl bg-surface-container-low hover:bg-surface-container-high transition-all duration-500 border border-transparent hover:border-outline-variant/10">
-<div className="flex items-center gap-6">
-<div className="w-12 h-12 flex items-center justify-center rounded-full bg-surface-container-lowest text-primary">
-<span className="material-symbols-outlined">lock</span>
-</div>
-<div>
-<p className="text-[10px] font-bold tracking-[0.2em] uppercase text-on-surface-variant mb-1">Security</p>
-<p className="text-lg font-medium text-on-surface">Change Password</p>
-</div>
-</div>
-<button className="text-primary hover:text-primary-container transition-colors p-2">
-<span className="material-symbols-outlined">chevron_right</span>
-</button>
-</div>
-</div>
-</section>
-{/* Preferences */}
-<section>
-<div className="flex items-center gap-4 mb-8">
-<span className="h-px flex-1 bg-outline-variant/20"></span>
-<h2 className="font-headline text-xs font-bold tracking-[0.3em] uppercase text-primary">Preferences</h2>
-<span className="h-px flex-1 bg-outline-variant/20"></span>
-</div>
-{/* Notification Preferences Card */}
-<div className="bg-surface-container-lowest rounded-2xl overflow-hidden border border-outline-variant/10 shadow-2xl">
-<div className="p-8 border-b border-outline-variant/10 flex justify-between items-center">
-<div className="flex items-center gap-4">
-<span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>notifications_active</span>
-<h3 className="font-headline text-xl font-bold">Notification Preferences</h3>
-</div>
-<span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-bold tracking-widest uppercase">Push Active</span>
-</div>
-<div className="p-8 space-y-8">
-<div className="flex items-center justify-between">
-<div>
-<p className="font-bold text-on-surface">New Matches</p>
-<p className="text-sm text-on-surface-variant opacity-70">Notify me when a new kindred spirit is found</p>
-</div>
-<div className="w-12 h-6 bg-primary-container rounded-full relative cursor-pointer">
-<div className="absolute right-1 top-1 w-4 h-4 bg-on-primary rounded-full"></div>
-</div>
-</div>
-<div className="flex items-center justify-between">
-<div>
-<p className="font-bold text-on-surface">Counsel Guidance</p>
-<p className="text-sm text-on-surface-variant opacity-70">Insights from our spiritual advisors</p>
-</div>
-<div className="w-12 h-6 bg-surface-container-high rounded-full relative cursor-pointer">
-<div className="absolute left-1 top-1 w-4 h-4 bg-on-surface-variant/40 rounded-full"></div>
-</div>
-</div>
-</div>
-</div>
-</section>
-{/* Account Status */}
-<section className="pt-8">
-<div className="flex items-center gap-4 mb-8">
-<span className="h-px flex-1 bg-outline-variant/20"></span>
-<h2 className="font-headline text-xs font-bold tracking-[0.3em] uppercase text-error">Account Status</h2>
-<span className="h-px flex-1 bg-outline-variant/20"></span>
-</div>
-<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-<button className="flex flex-col items-start p-8 rounded-2xl bg-surface-container-low border border-outline-variant/10 hover:bg-surface-container-high transition-all group">
-<span className="material-symbols-outlined text-primary mb-4 group-hover:scale-110 transition-transform">pause_circle</span>
-<p className="font-headline text-lg font-bold mb-1">Pause Membership</p>
-<p className="text-xs text-on-surface-variant opacity-60 text-left">Hide your profile temporarily while you focus inward.</p>
-</button>
-<button className="flex flex-col items-start p-8 rounded-2xl bg-surface-container-low border border-outline-variant/10 hover:bg-error-container/20 transition-all group">
-<span className="material-symbols-outlined text-error mb-4 group-hover:scale-110 transition-transform">cancel</span>
-<p className="font-headline text-lg font-bold mb-1 text-on-background">Close Account</p>
-<p className="text-xs text-on-surface-variant opacity-60 text-left">Permanently delete your profile and all connections.</p>
-</button>
-</div>
-</section>
-</div>
-{/* Logout CTA */}
-<div className="mt-20 flex justify-center">
-<button className="px-12 py-4 rounded-full border border-outline-variant/20 text-on-surface-variant hover:text-primary hover:border-primary/40 transition-all font-headline text-xs font-bold tracking-[0.4em] uppercase">
-                Sign Out of Kesher
-            </button>
-</div>
-</main>
-<DashboardBottomNav active="profile" />
+      <DashboardTopBar active="profile" avatarUrl={user?.avatarUrl || ""} />
+      <main className="max-w-6xl mx-auto pt-28 px-6 lg:px-10 pb-20">
+        <section className="mb-10">
+          <h1 className="text-4xl font-headline font-extrabold tracking-tight text-on-surface mb-2">Profile Settings</h1>
+          <p className="text-on-surface-variant text-sm">All onboarding details you submitted are visible below.</p>
+        </section>
+
+        {error ? <div className="mb-6 rounded-lg border border-error/30 bg-error/10 px-4 py-3 text-sm text-error">{error}</div> : null}
+
+        {loading ? (
+          <div className="rounded-xl border border-outline-variant/20 bg-surface-container-low p-8 text-on-surface-variant">
+            Loading profile details...
+          </div>
+        ) : (
+          <>
+            <section className="mb-8 rounded-2xl border border-outline-variant/20 bg-surface-container-low p-6">
+              <h2 className="mb-4 text-sm uppercase tracking-[0.2em] text-primary font-bold">Account Summary</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="rounded-xl bg-surface-container-high p-4">
+                  <p className="text-[10px] uppercase tracking-[0.14em] text-on-surface-variant">Email</p>
+                  <p className="mt-1 text-sm font-medium text-on-surface">{user?.email || "Not available"}</p>
+                </div>
+                <div className="rounded-xl bg-surface-container-high p-4">
+                  <p className="text-[10px] uppercase tracking-[0.14em] text-on-surface-variant">Profile Status</p>
+                  <p className="mt-1 text-sm font-medium text-on-surface">{bundle.profile?.profileStatus || "draft"}</p>
+                </div>
+                <div className="rounded-xl bg-surface-container-high p-4">
+                  <p className="text-[10px] uppercase tracking-[0.14em] text-on-surface-variant">Verification</p>
+                  <p className="mt-1 text-sm font-medium text-on-surface">{bundle.profile?.verificationStatus || "pending"}</p>
+                </div>
+              </div>
+            </section>
+
+            <section className="mb-8 rounded-2xl border border-outline-variant/20 bg-surface-container-low p-6">
+              <h2 className="mb-4 text-sm uppercase tracking-[0.2em] text-primary font-bold">Submitted Photos</h2>
+              {bundle.photos?.length ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {bundle.photos.map((photo) => (
+                    <div key={photo.id} className="rounded-xl overflow-hidden border border-outline-variant/20 bg-surface-container-high">
+                      <img src={photo.image_url} alt="Profile submission" className="h-40 w-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-on-surface-variant">No photos submitted yet.</p>
+              )}
+            </section>
+
+            <section className="rounded-2xl border border-outline-variant/20 bg-surface-container-low p-6">
+              <h2 className="mb-4 text-sm uppercase tracking-[0.2em] text-primary font-bold">Onboarding Details</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {profileEntries.map((entry) => (
+                  <div key={entry.key} className="rounded-xl border border-outline-variant/15 bg-surface-container-high p-4">
+                    <p className="text-[10px] uppercase tracking-[0.14em] text-on-surface-variant">{entry.label}</p>
+                    <p className="mt-1 text-sm text-on-surface break-words">{entry.value}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </>
+        )}
+      </main>
+      <DashboardBottomNav active="profile" />
     </>
   );
 }

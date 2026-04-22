@@ -1,12 +1,30 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import DashboardBottomNav from "@/components/dashboard/DashboardBottomNav";
 import DashboardTopBar from "@/components/dashboard/DashboardTopBar";
+import { RELIGIOUS_LEVEL_OPTIONS, SHABBAT_OPTIONS } from "@/features/onboarding/preferenceOptions";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { useEffect } from "react";
-import { fetchDiscoveryCards, sendInterestRequest } from "@/api/discovery";
+import {
+  fetchDiscoveryCards,
+  markFavoriteRequest,
+  markNotInterestedRequest,
+  sendInterestRequest,
+  unmarkFavoriteRequest
+} from "@/api/discovery";
 
 const FALLBACK_IMG =
   "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?auto=format&fit=crop&w=900&q=80";
+
+const DEFAULT_FILTERS = {
+  preferredGender: "auto",
+  religiousLevel: "",
+  lifestyle: "",
+  location: "",
+  minAge: "22",
+  maxAge: "40",
+  minMatchPercent: 65,
+  vesselTags: []
+};
 
 function DashboardDiscoveryPage() {
   usePageMeta({
@@ -27,6 +45,12 @@ function DashboardDiscoveryPage() {
             backdrop-filter: blur(24px);
             -webkit-backdrop-filter: blur(24px);
         }
+        .asymmetric-shadow {
+            box-shadow: 20px 20px 60px #0e0e0e, -20px -20px 60px #1c1b1b;
+        }
+        .monastic-gradient {
+            background: linear-gradient(135deg, #F5B41A 0%, #FFD58A 100%);
+        }
         .gold-gradient-btn {
             background: linear-gradient(135deg, #FFD58A 0%, #F5B41A 100%);
         }`
@@ -38,14 +62,12 @@ function DashboardDiscoveryPage() {
   const [error, setError] = useState("");
   const [connecting, setConnecting] = useState(false);
   const [swipeDirection, setSwipeDirection] = useState(null);
-  const [distanceKm, setDistanceKm] = useState(100);
-  const [selectedReligious, setSelectedReligious] = useState("");
-  const [selectedVesselTags, setSelectedVesselTags] = useState([]);
-  const [selectedGender, setSelectedGender] = useState("auto");
-  const [minMatchPercent, setMinMatchPercent] = useState(65);
+  const [appliedFilters, setAppliedFilters] = useState(DEFAULT_FILTERS);
+  const [draftFilters, setDraftFilters] = useState(DEFAULT_FILTERS);
   const [dragX, setDragX] = useState(0);
   const [dragging, setDragging] = useState(false);
   const [isSwiping, setIsSwiping] = useState(false);
+  const [toast, setToast] = useState(null);
   const pointerStartX = useRef(0);
   const activePointerId = useRef(null);
   const cardRef = useRef(null);
@@ -54,10 +76,21 @@ function DashboardDiscoveryPage() {
     try {
       setLoading(true);
       setError("");
+      const parsedMinAge = Number.parseInt(String(appliedFilters.minAge || "0"), 10);
+      const parsedMaxAge = Number.parseInt(String(appliedFilters.maxAge || "0"), 10);
+      const minAgeVal = Number.isFinite(parsedMinAge) ? Math.max(18, Math.min(70, parsedMinAge)) : 18;
+      const maxAgeVal = Number.isFinite(parsedMaxAge) ? Math.max(18, Math.min(70, parsedMaxAge)) : 70;
+      const safeMinAge = Math.min(minAgeVal, maxAgeVal);
+      const safeMaxAge = Math.max(minAgeVal, maxAgeVal);
       const data = await fetchDiscoveryCards({
         limit: 30,
-        minMatchPercent,
-        preferredGender: selectedGender === "auto" ? "" : selectedGender
+        minMatchPercent: appliedFilters.minMatchPercent,
+        preferredGender: appliedFilters.preferredGender === "auto" ? "" : appliedFilters.preferredGender,
+        religiousLevel: appliedFilters.religiousLevel,
+        lifestyle: appliedFilters.lifestyle,
+        location: appliedFilters.location,
+        minAge: safeMinAge,
+        maxAge: safeMaxAge
       });
       setCards(data?.cards || []);
       setIndex(0);
@@ -66,13 +99,20 @@ function DashboardDiscoveryPage() {
     } finally {
       setLoading(false);
     }
-  }, [minMatchPercent, selectedGender]);
+  }, [appliedFilters]);
 
   useEffect(() => {
     loadDiscoveryCards();
   }, [loadDiscoveryCards]);
 
-  const religiousOptions = useMemo(() => [...new Set(cards.map((card) => card.religiousLevel).filter(Boolean))], [cards]);
+  useEffect(() => {
+    if (!toast) return undefined;
+    const timer = window.setTimeout(() => setToast(null), 2400);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
+
+  const religiousOptions = RELIGIOUS_LEVEL_OPTIONS;
+  const lifestyleOptions = SHABBAT_OPTIONS;
 
   const vesselTagsByCard = useMemo(() => {
     const map = new Map();
@@ -91,12 +131,11 @@ function DashboardDiscoveryPage() {
 
   const filteredCards = useMemo(() => {
     return cards.filter((card) => {
-      const religiousOk = !selectedReligious || card.religiousLevel === selectedReligious;
       const vesselTags = vesselTagsByCard.get(card.userId) || [];
-      const vesselOk = selectedVesselTags.length === 0 || selectedVesselTags.some((tag) => vesselTags.includes(tag));
-      return religiousOk && vesselOk;
+      const vesselOk = appliedFilters.vesselTags.length === 0 || appliedFilters.vesselTags.some((tag) => vesselTags.includes(tag));
+      return vesselOk;
     });
-  }, [cards, selectedReligious, selectedVesselTags, vesselTagsByCard]);
+  }, [appliedFilters.vesselTags, cards, vesselTagsByCard]);
 
   const current = filteredCards[index] || null;
   const nextCard = filteredCards[index + 1] || null;
@@ -117,19 +156,49 @@ function DashboardDiscoveryPage() {
     }, 240);
   };
 
-  const onPass = () => shiftCard("left");
+  const onPass = async () => {
+    if (!current || isSwiping) return;
+    const targetUserId = current.userId;
+    shiftCard("left");
+    try {
+      await markNotInterestedRequest(targetUserId);
+    } catch (e) {
+      setError(e.message || "Failed to save not interested preference.");
+    }
+  };
 
   const onConnect = async () => {
     if (!current || connecting || isSwiping) return;
     const targetUserId = current.userId;
-    shiftCard("right");
     try {
       setConnecting(true);
       await sendInterestRequest(targetUserId);
+      setToast({ type: "success", message: "Interest sent successfully." });
+      shiftCard("right");
     } catch (e) {
-      setError(e.message || "Failed to send interest.");
+      const message = e.message || "Failed to send interest.";
+      setError(message);
+      setToast({ type: "error", message });
     } finally {
       setConnecting(false);
+    }
+  };
+
+  const onToggleFavorite = async () => {
+    if (!current) return;
+    try {
+      const nextFavorite = !current.isFavorite;
+      if (nextFavorite) {
+        await markFavoriteRequest(current.userId);
+      } else {
+        await unmarkFavoriteRequest(current.userId);
+      }
+      setCards((prev) => prev.map((card) => (card.userId === current.userId ? { ...card, isFavorite: nextFavorite } : card)));
+      setToast({ type: "success", message: nextFavorite ? "Added to favorites." : "Removed from favorites." });
+    } catch (e) {
+      const message = e.message || "Failed to update favorite.";
+      setToast({ type: "error", message });
+      setError(message);
     }
   };
 
@@ -165,72 +234,99 @@ function DashboardDiscoveryPage() {
   };
 
   const toggleVesselTag = (tag) => {
-    setSelectedVesselTags((prev) => (prev.includes(tag) ? prev.filter((x) => x !== tag) : [...prev, tag]));
+    setDraftFilters((prev) => ({
+      ...prev,
+      vesselTags: prev.vesselTags.includes(tag) ? prev.vesselTags.filter((x) => x !== tag) : [...prev.vesselTags, tag]
+    }));
+  };
+
+  const applyFilters = () => {
+    const normalizedMin = /^\d+$/.test(String(draftFilters.minAge)) ? String(Math.max(18, Math.min(70, Number(draftFilters.minAge)))) : "18";
+    const normalizedMax = /^\d+$/.test(String(draftFilters.maxAge)) ? String(Math.max(18, Math.min(70, Number(draftFilters.maxAge)))) : "70";
+    const minAgeVal = Number(normalizedMin);
+    const maxAgeVal = Number(normalizedMax);
+    const nextApplied = {
+      ...draftFilters,
+      minAge: String(Math.min(minAgeVal, maxAgeVal)),
+      maxAge: String(Math.max(minAgeVal, maxAgeVal))
+    };
+    setDraftFilters(nextApplied);
+    setAppliedFilters(nextApplied);
     setIndex(0);
   };
 
   const clearFilters = () => {
-    setDistanceKm(100);
-    setSelectedReligious("");
-    setSelectedVesselTags([]);
-    setSelectedGender("auto");
-    setMinMatchPercent(65);
+    setDraftFilters(DEFAULT_FILTERS);
+    setAppliedFilters(DEFAULT_FILTERS);
     setIndex(0);
   };
 
-  const renderCardContent = (card, { nameClass = "text-4xl" } = {}) => (
-    <div className="relative h-full w-full overflow-hidden">
-      <img alt={`${card.fullName} profile`} className="w-full h-full object-cover" src={card.avatarUrl || FALLBACK_IMG} />
-      <div className="absolute top-0 left-0 w-full p-5 bg-gradient-to-b from-black/65 to-transparent">
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/20 backdrop-blur-md rounded-full border border-primary/30">
-          <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-          <span className="text-[10px] text-primary font-bold tracking-widest uppercase">Verified Sanctuary Member</span>
-        </div>
-      </div>
-      <div className="absolute bottom-0 left-0 w-full h-[56%] bg-gradient-to-t from-[#131313] via-[#131313]/75 to-transparent" />
+  const renderCardContent = (card, { nameClass = "text-3xl", showDetails = true } = {}) => {
+    const displayName = (card.firstName || card.fullName || "Profile").split(" ")[0];
+    const locationText = [card.city, card.country].filter(Boolean).join(", ") || "Location not set";
+    const vesselTags = (vesselTagsByCard.get(card.userId) || []).slice(0, 2);
 
-      <div className="absolute bottom-0 left-0 w-full p-5 md:p-6">
-        <div className="flex items-end justify-between mb-3">
-          <div>
-            <h3 className={`${nameClass} font-headline font-extrabold tracking-tight leading-none text-on-surface`}>
-              {(card.firstName || card.fullName || "Profile").split(" ")[0]}
-              {card.age ? `, ` : ""}
-              <span className="text-primary/80 font-medium">{card.age || ""}</span>
-            </h3>
-            <div className="flex items-center gap-2 mt-1 text-outline font-medium">
-              <span className="material-symbols-outlined text-sm">location_on</span>
-              <span className="text-sm">{[card.city, card.country].filter(Boolean).join(", ") || "Location not set"}</span>
-            </div>
+    return (
+      <div className="relative h-full w-full">
+        {showDetails ? <div className="absolute -inset-1 monastic-gradient rounded-[2rem] blur opacity-10" /> : null}
+        <div className="relative h-full w-full bg-surface-container-lowest rounded-[2rem] overflow-hidden asymmetric-shadow">
+          <div className={`relative w-full overflow-hidden ${showDetails ? "h-[79%]" : "h-full"}`}>
+            <img
+              alt={`${card.fullName} profile`}
+              className="w-full h-full object-cover scale-105"
+              src={card.avatarUrl || FALLBACK_IMG}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/22 to-transparent" />
+
+            {showDetails ? (
+              <div className="absolute bottom-0 left-0 p-8 w-full">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="bg-primary-container/10 text-primary px-3 py-1 rounded-full text-[10px] font-bold tracking-[0.2em] uppercase border border-primary/20">
+                    Premium
+                  </span>
+                  <span className="bg-surface-container-high/60 backdrop-blur-md text-on-surface px-3 py-1 rounded-full text-[10px] font-bold tracking-[0.2em] uppercase">
+                    {card.matchPercent || 0}% Match
+                  </span>
+                </div>
+                <h3 className={`${nameClass} font-headline font-bold text-white mb-2`}>
+                  {displayName}
+                  {card.age ? `, ${card.age}` : ""}
+                </h3>
+                <p className="text-[#FFD58A] text-sm leading-relaxed max-w-[280px]">
+                  This connection is one step away. Review details before accepting.
+                </p>
+              </div>
+            ) : null}
           </div>
-          <button className="w-10 h-10 flex items-center justify-center rounded-full bg-black/35 hover:bg-black/50 transition-colors">
-            <span className="material-symbols-outlined text-primary/95">info</span>
-          </button>
-        </div>
 
-        <div className="flex flex-wrap gap-2 mb-4">
-          {[
-            card.religiousLevel || "Observant",
-            ...((vesselTagsByCard.get(card.userId) || []).length ? vesselTagsByCard.get(card.userId) : ["GENERAL"]),
-            card.occupation || "Professional"
-          ]
-            .slice(0, 3)
-            .map((tag) => (
-              <span
-                key={`${card.userId}-${tag}`}
-                className="px-3 py-1.5 rounded-full bg-surface-container-highest/95 border border-outline-variant/20 text-[11px] font-semibold text-on-surface-variant"
-              >
-                {tag}
-              </span>
-            ))}
+          {showDetails ? (
+            <div className="h-[21%] p-6 bg-[#2B241B] border-t border-[#9D8F79]/25">
+              <div className="grid grid-cols-2 gap-5">
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-on-surface-variant mb-1">Location</p>
+                  <p className="text-sm font-medium text-on-surface truncate">{locationText}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-widest text-on-surface-variant mb-1">Education</p>
+                  <p className="text-sm font-medium text-on-surface truncate">{card.educationLevel || "Not specified"}</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2 mt-3">
+                {[card.religiousLevel || "Observant", ...vesselTags].slice(0, 3).map((tag) => (
+                  <span
+                    key={`${card.userId}-${tag}`}
+                    className="px-2.5 py-1 rounded-full bg-surface-container-high text-[10px] font-semibold text-on-surface-variant border border-outline-variant/15"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
-
-        <button className="w-full py-3 rounded-lg bg-surface-container-high/90 border border-primary/10 hover:bg-surface-bright transition-all flex items-center justify-center gap-2">
-          <span className="text-sm font-headline font-bold uppercase tracking-widest text-primary">View Full Profile</span>
-          <span className="material-symbols-outlined text-primary">arrow_forward</span>
-        </button>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <>
@@ -238,6 +334,15 @@ function DashboardDiscoveryPage() {
       <div className="flex flex-1 mt-20 h-[calc(100vh-5rem)] overflow-hidden">
         <main className="flex-1 relative flex flex-col items-center justify-center overflow-hidden px-4 md:px-6">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[520px] h-[520px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
+          {toast ? (
+            <div
+              className={`absolute top-4 right-4 z-[70] rounded-lg px-4 py-2 text-sm border ${
+                toast.type === "success" ? "bg-primary/15 border-primary/30 text-[#FFD58A]" : "bg-error/15 border-error/30 text-[#FFB4AB]"
+              }`}
+            >
+              {toast.message}
+            </div>
+          ) : null}
           {error ? <div className="mb-4 border border-error/30 bg-error/10 text-error rounded-lg px-4 py-3 text-sm">{error}</div> : null}
           {loading ? (
             <div className="glass-card rounded-xl p-10 text-center text-on-surface-variant border border-outline-variant/10">
@@ -248,47 +353,37 @@ function DashboardDiscoveryPage() {
               No more profiles for now. Check back soon for new matches.
             </div>
           ) : (
-            <div className="w-full max-w-[430px] h-full flex flex-col items-center justify-center">
-              <div className="relative w-full h-[min(55vh,560px)] min-h-[420px] flex items-center justify-center">
+            <div className="w-full max-w-[410px] h-full flex flex-col items-center justify-center">
+              <div className="relative w-full h-[504px] flex items-center justify-center">
                 {upcomingCards.map((previewCard, idx) => {
-                  const translateY = 28 + idx * 12;
-                  const width = 91 - idx * 4;
-                  const previewName = (previewCard.firstName || previewCard.fullName || "Profile").split(" ")[0];
+                  const offset = 34 + idx * 14;
+                  const opacity = Math.max(0.36, 0.68 - idx * 0.12);
                   return (
-                    <div
-                      key={`deck-layer-${previewCard.userId}`}
-                      className="absolute left-1/2 top-0 h-[92px] rounded-t-[14px] rounded-b-[10px] border border-[#9D8F79]/25 shadow-[0_8px_20px_rgba(0,0,0,0.28)] pointer-events-none overflow-hidden"
+                    <article
+                      key={`preview-${previewCard.userId}`}
+                      className="absolute inset-0 pointer-events-none"
                       style={{
-                        width: `${width}%`,
-                        transform: `translateX(-50%) translateY(${translateY}px)`,
-                        zIndex: 8 - idx
+                        transform: `translate(${offset}px, ${offset}px) scale(${0.965 - idx * 0.01})`,
+                        opacity,
+                        zIndex: 14 - idx
                       }}
                     >
-                      <img
-                        src={previewCard.avatarUrl || FALLBACK_IMG}
-                        alt={`${previewCard.fullName} preview`}
-                        className="h-full w-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
-                      <div className="absolute left-3 top-2 text-[11px] font-semibold text-[#F5E7C2] tracking-wide">
-                        {previewName}
-                        {previewCard.age ? `, ${previewCard.age}` : ""}
-                      </div>
-                    </div>
+                      {renderCardContent(previewCard, { showDetails: true, nameClass: "text-2xl" })}
+                    </article>
                   );
                 })}
 
                 {nextCard ? (
                   <article
                     key={`next-${nextCard.userId}`}
-                    className="absolute inset-x-0 bottom-0 top-10 bg-[#1A1A1A] rounded-xl border border-[#9D8F79]/16 shadow-[0_16px_36px_rgba(0,0,0,0.4)] overflow-hidden pointer-events-none transition-transform duration-240 ease-out"
+                    className="absolute inset-0 pointer-events-none transition-transform duration-260 ease-out"
                     style={{
                       zIndex: 20,
-                      transform: `translateY(${18 * (1 - stackProgress)}px) scale(${0.96 + 0.04 * stackProgress})`,
-                      opacity: 0.86 + 0.14 * stackProgress
+                      transform: `translate(${18 * (1 - stackProgress)}px, ${18 * (1 - stackProgress)}px) scale(${0.965 + 0.035 * stackProgress})`,
+                      opacity: 0.8 + 0.2 * stackProgress
                     }}
                   >
-                    {renderCardContent(nextCard)}
+                    {renderCardContent(nextCard, { showDetails: true, nameClass: "text-2xl" })}
                   </article>
                 ) : null}
 
@@ -299,7 +394,7 @@ function DashboardDiscoveryPage() {
                   onPointerMove={handlePointerMove}
                   onPointerUp={handlePointerUp}
                   onPointerCancel={handlePointerUp}
-                  className="absolute inset-x-0 bottom-0 top-10 bg-[#1A1A1A] rounded-xl border border-[#9D8F79]/18 shadow-[0_20px_50px_rgba(0,0,0,0.55)] overflow-hidden transition-transform duration-240 ease-out cursor-grab active:cursor-grabbing touch-none select-none will-change-transform"
+                  className="absolute inset-0 transition-transform duration-240 ease-out cursor-grab active:cursor-grabbing touch-none select-none will-change-transform"
                   style={{
                     zIndex: 30,
                     transform:
@@ -332,35 +427,39 @@ function DashboardDiscoveryPage() {
                     favorite
                   </span>
                 </button>
-                <button className="w-11 h-11 md:w-[48px] md:h-[48px] rounded-lg flex items-center justify-center border border-transparent bg-surface-container-low hover:bg-surface-bright transition-all active:scale-95 group shadow-md">
-                  <span className="material-symbols-outlined text-[24px] md:text-[26px] text-outline group-hover:text-tertiary transition-colors">star</span>
+                <button
+                  onClick={onToggleFavorite}
+                  className="w-11 h-11 md:w-[48px] md:h-[48px] rounded-lg flex items-center justify-center border border-transparent bg-surface-container-low hover:bg-surface-bright transition-all active:scale-95 group shadow-md"
+                >
+                  <span
+                    className={`material-symbols-outlined text-[24px] md:text-[26px] transition-colors ${
+                      current?.isFavorite ? "text-[#FFD58A]" : "text-outline group-hover:text-tertiary"
+                    }`}
+                    style={current?.isFavorite ? { fontVariationSettings: "'FILL' 1" } : undefined}
+                  >
+                    star
+                  </span>
                 </button>
               </div>
             </div>
           )}
         </main>
 
-        <aside className="hidden lg:flex w-80 h-full bg-[#0E0E0E] border-l border-[#9D8F79]/20 flex-col p-8 overflow-y-auto">
+        <aside className="onboarding-flow hidden lg:flex w-[400px] h-full bg-[#0E0E0E] border-l border-[#9D8F79]/20 flex-col p-8 overflow-y-auto">
           <div className="flex items-center justify-between mb-10">
             <h2 className="text-xl font-bold text-[#FFD58A] font-headline">Discovery Filters</h2>
             <span className="material-symbols-outlined text-[#9D8F79]">tune</span>
           </div>
           <div className="space-y-8">
             <div className="space-y-3">
-              <label className="text-[10px] uppercase tracking-widest font-bold text-[#9D8F79]">Location Reach</label>
+              <label className="text-[10px] uppercase tracking-widest font-bold text-[#9D8F79]">Preferred Location</label>
               <input
-                type="range"
-                min={10}
-                max={250}
-                step={5}
-                value={distanceKm}
-                onChange={(e) => setDistanceKm(Number(e.target.value))}
-                className="w-full accent-[#F5B41A]"
+                type="text"
+                value={draftFilters.location}
+                onChange={(e) => setDraftFilters((prev) => ({ ...prev, location: e.target.value }))}
+                placeholder="City or country"
+                className="obi-input"
               />
-              <div className="flex justify-between text-xs text-on-surface-variant font-medium">
-                <span>Local</span>
-                <span className="text-primary">Up to {distanceKm}km</span>
-              </div>
             </div>
 
             <div className="space-y-3">
@@ -371,21 +470,51 @@ function DashboardDiscoveryPage() {
                   { value: "male", label: "Male" },
                   { value: "female", label: "Female" }
                 ].map((option) => {
-                  const active = selectedGender === option.value;
+                  const active = draftFilters.preferredGender === option.value;
                   return (
                     <button
                       key={option.value}
-                      onClick={() => setSelectedGender(option.value)}
-                      className={`px-3 py-2 rounded border text-[11px] font-semibold transition-colors ${
-                        active
-                          ? "bg-surface-container border-primary/30 text-primary"
-                          : "bg-surface-container-low border-outline-variant/10 text-on-surface-variant hover:border-outline-variant/30"
-                      }`}
+                      onClick={() => setDraftFilters((prev) => ({ ...prev, preferredGender: option.value }))}
+                      className={active ? "onboarding-choice-pill onboarding-choice-pill--selected" : "onboarding-choice-pill"}
                     >
                       {option.label}
                     </button>
                   );
                 })}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[10px] uppercase tracking-widest font-bold text-[#9D8F79]">Preferred Age Range</label>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  min={18}
+                  max={70}
+                  value={draftFilters.minAge}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === "" || /^\d+$/.test(value)) {
+                      setDraftFilters((prev) => ({ ...prev, minAge: value }));
+                    }
+                  }}
+                  className="obi-input"
+                />
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  min={18}
+                  max={70}
+                  value={draftFilters.maxAge}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === "" || /^\d+$/.test(value)) {
+                      setDraftFilters((prev) => ({ ...prev, maxAge: value }));
+                    }
+                  }}
+                  className="obi-input"
+                />
               </div>
             </div>
 
@@ -396,40 +525,54 @@ function DashboardDiscoveryPage() {
                 min={60}
                 max={90}
                 step={5}
-                value={minMatchPercent}
-                onChange={(e) => setMinMatchPercent(Number(e.target.value))}
+                value={draftFilters.minMatchPercent}
+                onChange={(e) => setDraftFilters((prev) => ({ ...prev, minMatchPercent: Number(e.target.value) }))}
                 className="w-full accent-[#F5B41A]"
               />
               <div className="flex justify-between text-xs text-on-surface-variant font-medium">
                 <span>Strict</span>
-                <span className="text-primary">{minMatchPercent}% and above</span>
+                <span className="text-primary">{draftFilters.minMatchPercent}% and above</span>
               </div>
             </div>
 
             <div className="space-y-3">
               <label className="text-[10px] uppercase tracking-widest font-bold text-[#9D8F79]">Religious Observance</label>
-              <div className="grid grid-cols-1 gap-2">
-                {religiousOptions.slice(0, 6).map((option) => {
-                  const active = selectedReligious === option;
+              <div className="flex flex-wrap gap-2">
+                {religiousOptions.map((option) => {
+                  const active = draftFilters.religiousLevel === option;
                   return (
                     <button
                       key={option}
                       onClick={() => {
-                        setSelectedReligious(active ? "" : option);
-                        setIndex(0);
+                        setDraftFilters((prev) => ({ ...prev, religiousLevel: active ? "" : option }));
                       }}
-                      className={`flex items-center justify-between px-4 py-3 rounded border text-xs font-semibold ${
-                        active
-                          ? "bg-surface-container border-primary/30 text-primary"
-                          : "bg-surface-container-low border-outline-variant/10 text-on-surface-variant hover:border-outline-variant/30"
-                      }`}
+                      className={`${active ? "onboarding-choice-pill onboarding-choice-pill--selected" : "onboarding-choice-pill"} text-[11px] px-3 py-2`}
                     >
                       <span>{option}</span>
-                      {active ? (
-                        <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>
-                          check_circle
-                        </span>
-                      ) : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[10px] uppercase tracking-widest font-bold text-[#9D8F79]">Lifestyle Preference</label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setDraftFilters((prev) => ({ ...prev, lifestyle: "" }))}
+                  className={`${!draftFilters.lifestyle ? "onboarding-choice-pill onboarding-choice-pill--selected" : "onboarding-choice-pill"} text-[11px] px-3 py-2`}
+                >
+                  <span>Any Lifestyle</span>
+                </button>
+                {lifestyleOptions.map((option) => {
+                  const active = draftFilters.lifestyle === option;
+                  return (
+                    <button
+                      key={option}
+                      onClick={() => setDraftFilters((prev) => ({ ...prev, lifestyle: active ? "" : option }))}
+                      className={`${active ? "onboarding-choice-pill onboarding-choice-pill--selected" : "onboarding-choice-pill"} text-[11px] px-3 py-2`}
+                    >
+                      <span>{option}</span>
                     </button>
                   );
                 })}
@@ -440,16 +583,12 @@ function DashboardDiscoveryPage() {
               <label className="text-[10px] uppercase tracking-widest font-bold text-[#9D8F79]">Vessel Type</label>
               <div className="flex flex-wrap gap-2">
                 {["ACADEMIC", "CREATIVE", "LEADERSHIP"].map((tag) => {
-                  const active = selectedVesselTags.includes(tag);
+                  const active = draftFilters.vesselTags.includes(tag);
                   return (
                     <button
                       key={tag}
                       onClick={() => toggleVesselTag(tag)}
-                      className={`px-3 py-1.5 rounded text-[10px] font-bold ${
-                        active
-                          ? "bg-primary/10 border border-primary/20 text-primary"
-                          : "bg-surface-container-high border border-outline-variant/10 text-on-surface-variant"
-                      }`}
+                      className={active ? "onboarding-chip onboarding-chip--selected" : "onboarding-chip"}
                     >
                       {tag}
                     </button>
@@ -460,7 +599,7 @@ function DashboardDiscoveryPage() {
 
             <div className="pt-8">
               <button
-                onClick={loadDiscoveryCards}
+                onClick={applyFilters}
                 className="w-full py-4 gold-gradient-btn rounded text-on-primary font-headline font-bold text-sm"
               >
                 REFINE SANCTUARY

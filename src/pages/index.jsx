@@ -23,3 +23,13 @@ export { MatchReceivedModalPage } from "@/pages/generated";
 export { MatchmakerChatPage } from "@/pages/generated";
 export { MyProfilePage } from "@/pages/generated";
 export { AccountSettingsPage } from "@/pages/generated";
+export {
+  FavoritesPage,
+  HelpSupportDashboardPage,
+  LikesReceivedPage,
+  NotificationsPage,
+  PreferencesFiltersPage,
+  PrivacySafetyPage,
+  RecentlyViewedPage,
+  SentRequestsPage
+} from "@/pages/generated/DashboardMemberPages";

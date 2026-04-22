@@ -4,6 +4,7 @@ import OnboardingKesherHeader from "@/components/onboarding/OnboardingKesherHead
 import OnboardingSevenStepProgress from "@/components/onboarding/OnboardingSevenStepProgress";
 import OnboardingValidationToasts from "@/components/onboarding/OnboardingValidationToasts";
 import { getOnboardingStepTitle } from "@/features/onboarding/onboardingStepTitles";
+import { GENDER_OPTIONS } from "@/features/onboarding/preferenceOptions";
 import { useOnboarding } from "@/features/onboarding/OnboardingContext";
 import { useOnboardingStepNav } from "@/features/onboarding/useOnboardingStepNav";
 import { usePageMeta } from "@/hooks/usePageMeta";
@@ -62,9 +63,11 @@ export default function OnboardingBasicInfoStep() {
                       onChange={(e) => updateField("gender", e.target.value)}
                     >
                       <option value="">Select…</option>
-                      <option value="male">Male</option>
-                      <option value="female">Female</option>
-                      <option value="other">Other</option>
+                      {GENDER_OPTIONS.map((gender) => (
+                        <option key={gender} value={gender}>
+                          {gender.charAt(0).toUpperCase() + gender.slice(1)}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div className="flex flex-col gap-2.5">

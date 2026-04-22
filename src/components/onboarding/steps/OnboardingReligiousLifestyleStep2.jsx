@@ -4,13 +4,10 @@ import OnboardingKesherHeader from "@/components/onboarding/OnboardingKesherHead
 import OnboardingSevenStepProgress from "@/components/onboarding/OnboardingSevenStepProgress";
 import OnboardingValidationToasts from "@/components/onboarding/OnboardingValidationToasts";
 import { getOnboardingStepTitle } from "@/features/onboarding/onboardingStepTitles";
+import { RELIGIOUS_LEVEL_OPTIONS, SHABBAT_OPTIONS } from "@/features/onboarding/preferenceOptions";
 import { useOnboarding } from "@/features/onboarding/OnboardingContext";
 import { useOnboardingStepNav } from "@/features/onboarding/useOnboardingStepNav";
 import { usePageMeta } from "@/hooks/usePageMeta";
-
-const RELIGIOUS_LEVELS = ["Haredi", "Dati Leumi", "Dati", "Traditional", "Strengthening", "Other"];
-
-const SHABBAT_OPTIONS = ["Shomer Shabbat", "Partial", "Non-observant", "Flexible"];
 
 const KASHRUT_OPTIONS = ["Strict (Glatt)", "Standard Kosher", "Kosher at Home", "Not Observed"];
 
@@ -60,7 +57,7 @@ export default function OnboardingReligiousLifestyleStep2() {
                     Religious Level
                   </label>
                   <div className="-mx-2 flex gap-3 overflow-x-auto px-2 pb-2 hide-scrollbar">
-                    {RELIGIOUS_LEVELS.map((level) => {
+                    {RELIGIOUS_LEVEL_OPTIONS.map((level) => {
                       const active = values.religiousLevel === level;
                       return (
                         <button
